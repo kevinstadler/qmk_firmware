@@ -19,7 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include QMK_KEYBOARD_H
 #include <stdio.h>
 
-#define KEYLOGGER_LENGTH 63
+#define KEYLOGGER_LENGTH 70
 char keylog_str[KEYLOGGER_LENGTH+1];
 
 void keyboard_post_init_user(void) {
@@ -32,56 +32,87 @@ void keyboard_post_init_user(void) {
   }
 }
 
-// FIXME backspace can't toggle layer because deleting a lot (but backspace can be modified by gui or alt!)
+bool caps_word_press_user(uint16_t keycode) {
+    switch (keycode) {
+        // Keycodes that continue Caps Word, with shift applied.
+        case KC_ENTER:
+        case KC_ESC:
+          return false;
+        default:
+          return true;
+    }
+}
+
+enum layers {
+  _BASE = 0,
+  _SYM,
+  /* _NUM, */
+  _LNAV,
+  _RNAV,
+  _CMDTAB
+};
+
+const key_override_t coln_key_override =
+    ko_make_basic(MOD_MASK_SHIFT, KC_COLN, KC_SCLN); // Shift : is ;
+
+const key_override_t** key_overrides = (const key_override_t*[]){
+    &coln_key_override,
+    NULL
+};
+
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-	[0] = LAYOUT_split_3x6_3(KC_GRV, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_BSLS, LT(2,KC_ESC), LALT_T(KC_A), LCTL_T(KC_S), LGUI_T(KC_D), LSFT_T(KC_F), KC_G, KC_H, RSFT_T(KC_J), RGUI_T(KC_K), RCTL_T(KC_L), RALT_T(KC_SCLN), KC_QUOT, TT(3), KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, LT(3,KC_MINS), KC_BSPC, LT(1,KC_TAB), LT(2,KC_ENT), KC_BSPC, LT(1,KC_SPC), KC_DEL),
-	[1] = LAYOUT_split_3x6_3(KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_CIRC, KC_AMPR, KC_ASTR, KC_MINS, KC_EQL, KC_TRNS, KC_TILD, KC_EXLM, KC_AT, KC_HASH, LSFT_T(KC_DLR), KC_PERC, KC_EQL, KC_LPRN, KC_SCLN, KC_RPRN, KC_QUES, KC_TRNS, DT_UP, DT_DOWN, DT_PRNT, KC_NO, KC_NO, KC_NO, KC_MINS, KC_LBRC, KC_COLN, KC_RBRC, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS),
-	[2] = LAYOUT_split_3x6_3(SGUI(KC_3), SGUI(KC_4), KC_AT, KC_HASH, KC_DLR, KC_PERC, KC_CIRC, KC_P7, KC_P8, KC_P9, KC_PSLS, KC_NUHS, KC_NO, KC_NO, KC_LPRN, KC_SCLN, KC_RPRN, KC_NO, KC_EQL, KC_P4, KC_P5, KC_P6, KC_PAST, KC_NO, KC_NO, KC_NO, KC_LBRC, KC_COLN, KC_RBRC, KC_NO, KC_MINS, KC_P1, KC_P2, KC_P3, KC_COMM, KC_DOT, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_P0, KC_TRNS),
-	[3] = LAYOUT_split_3x6_3(KC_F1, KC_F2, KC_UP, KC_F3, KC_F4, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_F12, LSFT_T(KC_ESC), KC_LEFT, KC_DOWN, KC_RGHT, KC_LGUI, KC_F5, RGB_TOG, KC_RSFT, KC_RGUI, KC_RCTL, KC_RALT, KC_NO, KC_TRNS, KC_HOME, KC_PGDN, KC_PGUP, KC_END, KC_NO, RGB_MOD, RGB_RMOD, RGB_HUI, RGB_HUD, RGB_VAI, RGB_VAD, KC_SPC, KC_TAB, KC_ENT, KC_NO, KC_NO, KC_NO),
-	[4] = LAYOUT_split_3x6_3(KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_ESC, KC_LALT, KC_LCTL, KC_LGUI, KC_LSFT, KC_NO, KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_HOME, KC_PGDN, KC_PGUP, KC_END, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_TRNS, KC_TRNS, KC_TRNS)
+	[0] = LAYOUT_split_3x6_3(KC_GRV, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, CAPS_WORD, KC_ESC, LCTL_T(KC_A), LALT_T(KC_S), LT(4,KC_D), LSFT_T(KC_F), KC_G, KC_H, RSFT_T(KC_J), LT(4,KC_K), RALT_T(KC_L), KC_COLN, KC_QUOT, TT(3), KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, TT(3), KC_BSPC, LT(1,KC_TAB), LT(2,KC_ENT), LT(2,KC_ENT), LT(1,KC_SPC), KC_BSPC),
+	[1] = LAYOUT_split_3x6_3(KC_TRNS, SGUI(KC_4), KC_LPRN, KC_SCLN, KC_RPRN, KC_NO, KC_CIRC, KC_7, KC_8, KC_9, KC_EQL, DT_UP, SGUI(KC_3), KC_BSLS, KC_LBRC, KC_COLN, LSFT_T(KC_RBRC), KC_NO, KC_PLUS, RSFT_T(KC_4), KC_5, KC_6, KC_MINS, DT_DOWN, KC_NO, KC_NO, KC_LCBR, KC_NO, KC_RCBR, KC_NO, KC_NO, KC_1, KC_2, KC_3, KC_TRNS, DT_PRNT, KC_TRNS, KC_TRNS, KC_TRNS, KC_ENT, KC_P0, KC_BSPC),
+	[2] = LAYOUT_split_3x6_3(KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_F12, KC_ESC, KC_LCTL, KC_LALT, KC_LGUI, KC_LSFT, KC_NO, KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_HOME, KC_PGDN, KC_PGUP, KC_END, KC_NO, KC_NO, KC_TRNS, KC_TRNS, KC_NO, KC_NO, KC_TRNS, KC_TRNS),
+	[3] = LAYOUT_split_3x6_3(KC_F14, KC_F15, KC_UP, KC_NO, KC_NO, KC_NO, KC_MPRV, KC_MPLY, KC_MNXT, 0x7F, 0x81, 0x80, LSFT_T(KC_ESC), KC_LEFT, KC_DOWN, KC_RGHT, KC_NO, KC_NO, RGB_TOG, KC_RSFT, KC_RGUI, KC_RALT, KC_RCTL, KC_NO, KC_TRNS, KC_HOME, KC_PGDN, KC_PGUP, KC_END, KC_NO, RGB_RMOD, RGB_MOD, RGB_HUD, RGB_HUI, RGB_VAD, KC_TRNS, KC_BSPC, KC_TAB, KC_ENT, KC_NO, KC_NO, KC_NO),
+	[4] = LAYOUT_split_3x6_3(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_SPC, KC_TAB, KC_TRNS, KC_TRNS, KC_SPC, KC_TRNS)
 };
 
 #ifdef OLED_ENABLE
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
   if (!is_keyboard_master()) {
-    return OLED_ROTATION_180;  // flips the display 180 degrees if offhand
+    return OLED_ROTATION_90;  // flips the display 180 degrees if offhand
   }
-  return rotation;
+  return OLED_ROTATION_270;
+  /* return rotation; */
 }
 
 void oled_render_layer_state(void) {
-    oled_write_P(PSTR("L: "), false);
-    /* oled_write_P(layer_state, false); */
     switch (layer_state) {
         case 0:
-            oled_write_P(PSTR("Default"), false);
+        case (1 << _BASE):
+            oled_write_P(PSTR("Alpha"), true);
             break;
-        case 2:
-            oled_write_P(PSTR("Symbols"), false);
+        case (1 << _SYM):
+            oled_write_ln_P(PSTR("Sym"), true);
             break;
-        case 4:
-            oled_write_P(PSTR("Num"), false);
+        /* case (1 << _NUM): */
+        /*     oled_write_ln_P(PSTR("Num"), true); */
+        /*     break; */
+        case (1 << _LNAV):
+            oled_write_ln_P(PSTR("LNav"), true);
             break;
-        case 8:
-            oled_write_P(PSTR("Left Nav/Fn"), false);
+        case (1 << _RNAV):
+            oled_write_ln_P(PSTR("VimNav"), true);
             break;
-        case 16:
-            oled_write_P(PSTR("Vim Nav"), false);
+        case (1 << _CMDTAB):
+            oled_write_ln_P(PSTR("Cmd"), true);
             break;
     }
-    oled_write_P(PSTR(" "), false);
+    /* oled_write_P(PSTR(" "), false); */
     const uint8_t mods = get_mods();
     if (mods & MOD_MASK_SHIFT) {
-      oled_write_P(PSTR("Shft"), true);
+      oled_write_P(PSTR("Sh"), true);
     }
     if (mods & MOD_MASK_ALT) {
-      oled_write_P(PSTR("Alt"), true);
+      oled_write_P(PSTR("Al"), true);
     }
     if (mods & MOD_MASK_GUI) {
-      oled_write_P(PSTR("Cmd"), true);
+      oled_write_P(PSTR("Cm"), true);
     }
     if (mods & MOD_MASK_CTRL) {
-      oled_write_P(PSTR("Ctrl"), true);
+      oled_write_P(PSTR("Ct"), true);
     }
     oled_write_P(PSTR("\n"), false);
 }
@@ -163,13 +194,48 @@ bool oled_task_user(void) {
 
 #endif // OLED_ENABLE
 
+static layer_state_t prev_layer_state;
+layer_state_t layer_state_set_user(layer_state_t state) {
+	if (state == (1 << _CMDTAB)) {
+		add_mods(MOD_LGUI);
+	} else if (prev_layer_state == (1 << _CMDTAB)) {
+		del_mods(MOD_LGUI);
+	}
+	prev_layer_state = state;
+	return state;
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
   // TODO if we're in the tab-as-tab layer, apply whichever modifier is toggled at the top
+
+//  https://github.com/qmk/qmk_firmware/blob/master/docs/feature_advanced_keycodes.md#shift--backspace-for-delete-idshift-backspace-for-delete
+  #ifdef OLED_ENABLE
   if (record->event.pressed) {
-    #ifdef OLED_ENABLE
     set_keylog(keycode, record);
-    #endif
-/*     const uint8_t mods = get_mods(); */
+  }
+  #endif
+  const uint8_t mods = get_mods();
+  if (keycode == KC_BSPC) {
+    static bool delkey_registered;
+    if (record->event.pressed) {
+      if (mods & MOD_MASK_SHIFT) {
+        del_mods(MOD_MASK_SHIFT);
+        register_code(KC_DEL);
+        delkey_registered = true;
+        // Reapplying modifier state so that the held shift key(s)
+        // still work even after having tapped the Backspace/Delete key.
+        set_mods(mods);
+        return false;
+      }
+    } else {
+      // In case KC_DEL is still being sent even after the release of KC_BSPC
+      if (delkey_registered) {
+        unregister_code(KC_DEL);
+        delkey_registered = false;
+        return false;
+      }
+    }
+
 /*     // if alt (and not cmd or ctrl): could be a special character */
 /*     if ( (mods & MOD_MASK_ALT) && */
 /*         !(mods & MOD_MASK_GUI) && */
