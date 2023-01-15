@@ -35,38 +35,106 @@ void keyboard_post_init_user(void) {
 bool caps_word_press_user(uint16_t keycode) {
     switch (keycode) {
         // Keycodes that continue Caps Word, with shift applied.
+        case KC_A ... KC_Z:
+        case KC_MINS:
+            add_weak_mods(MOD_BIT(KC_LSFT));  // Apply shift to next key.
+            return true;
         case KC_ENTER:
         case KC_ESC:
           return false;
-        default:
-          return true;
     }
+    return true;
 }
 
 enum layers {
   _BASE = 0,
   _SYM,
   /* _NUM, */
-  _LNAV,
   _RNAV,
+  _LNAV,
   _CMDTAB
 };
 
-const key_override_t coln_key_override =
-    ko_make_basic(MOD_MASK_SHIFT, KC_COLN, KC_SCLN); // Shift : is ;
+/* https://github.com/samhocevar-forks/qmk-firmware/blob/master/docs/feature_tap_dance.md#example-5-using-tap-dance-for-advanced-mod-tap-and-layer-tap-keys */
+// tapdance keycodes
+enum td_keycodes {
+  LSHIFT_RIGHTPARENS // Our example key: `LALT` when held, `(` when tapped. Add additional keycodes for each tapdance.
+};
+// define a type containing as many tapdance states as you need
+typedef enum {
+  SINGLE_TAP,
+  SINGLE_HOLD,
+  DOUBLE_SINGLE_TAP
+} td_state_t;
+// create a global instance of the tapdance state type
+static td_state_t td_state;
+// declare your tapdance functions:
+// function to determine the current tapdance state
+int cur_dance (qk_tap_dance_state_t *state);
+// `finished` and `reset` functions for each tapdance keycode
+void shiftrp_finished (qk_tap_dance_state_t *state, void *user_data);
+void shiftrp_reset (qk_tap_dance_state_t *state, void *user_data);
 
-const key_override_t** key_overrides = (const key_override_t*[]){
-    &coln_key_override,
-    NULL
+// determine the tapdance state to return
+int cur_dance (qk_tap_dance_state_t *state) {
+  if (state->count == 1) {
+    if (state->interrupted || !state->pressed) { return SINGLE_TAP; }
+    else { return SINGLE_HOLD; }
+  }
+  if (state->count == 2) { return DOUBLE_SINGLE_TAP; }
+  else { return 3; } // any number higher than the maximum state value you return above
+}
+
+// handle the possible states for each tapdance keycode you define:
+
+void shiftrp_finished (qk_tap_dance_state_t *state, void *user_data) {
+  td_state = cur_dance(state);
+  switch (td_state) {
+    case SINGLE_TAP:
+      register_code16(KC_RPRN);
+      break;
+    case SINGLE_HOLD:
+      register_mods(MOD_BIT(KC_LSFT)); // for a layer-tap key, use `layer_on(_MY_LAYER)` here
+      break;
+    case DOUBLE_SINGLE_TAP: // allow nesting of 2 parens `((` within tapping term
+      tap_code16(KC_RPRN);
+      register_code16(KC_RPRN);
+  }
+}
+
+void shiftrp_reset (qk_tap_dance_state_t *state, void *user_data) {
+  switch (td_state) {
+    case SINGLE_TAP:
+      unregister_code16(KC_RPRN);
+      break;
+    case SINGLE_HOLD:
+      unregister_mods(MOD_BIT(KC_LSFT)); // for a layer-tap key, use `layer_off(_MY_LAYER)` here
+      break;
+    case DOUBLE_SINGLE_TAP:
+      unregister_code16(KC_RPRN);
+  }
+}
+
+// define `ACTION_TAP_DANCE_FN_ADVANCED()` for each tapdance keycode, passing in `finished` and `reset` functions
+qk_tap_dance_action_t tap_dance_actions[] = {
+  [LSHIFT_RIGHTPARENS] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, shiftrp_finished, shiftrp_reset)
 };
 
 
+/* const key_override_t coln_key_override = */
+/*     ko_make_basic(MOD_MASK_SHIFT, KC_MINS, KC_ASTR); // Shift - is * */
+
+/* const key_override_t** key_overrides = (const key_override_t*[]){ */
+/*     &coln_key_override, */
+/*     NULL */
+/* }; */
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-	[0] = LAYOUT_split_3x6_3(KC_GRV, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, CAPS_WORD, KC_ESC, LCTL_T(KC_A), LALT_T(KC_S), LT(4,KC_D), LSFT_T(KC_F), KC_G, KC_H, RSFT_T(KC_J), LT(4,KC_K), RALT_T(KC_L), KC_COLN, KC_QUOT, TT(3), KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, TT(3), KC_BSPC, LT(1,KC_TAB), LT(2,KC_ENT), LT(2,KC_ENT), LT(1,KC_SPC), KC_BSPC),
-	[1] = LAYOUT_split_3x6_3(KC_TRNS, SGUI(KC_4), KC_LPRN, KC_SCLN, KC_RPRN, KC_NO, KC_CIRC, KC_7, KC_8, KC_9, KC_EQL, DT_UP, SGUI(KC_3), KC_BSLS, KC_LBRC, KC_COLN, LSFT_T(KC_RBRC), KC_NO, KC_PLUS, RSFT_T(KC_4), KC_5, KC_6, KC_MINS, DT_DOWN, KC_NO, KC_NO, KC_LCBR, KC_NO, KC_RCBR, KC_NO, KC_NO, KC_1, KC_2, KC_3, KC_TRNS, DT_PRNT, KC_TRNS, KC_TRNS, KC_TRNS, KC_ENT, KC_P0, KC_BSPC),
-	[2] = LAYOUT_split_3x6_3(KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_F12, KC_ESC, KC_LCTL, KC_LALT, KC_LGUI, KC_LSFT, KC_NO, KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_NO, KC_HOME, KC_PGDN, KC_PGUP, KC_END, KC_NO, KC_NO, KC_TRNS, KC_TRNS, KC_NO, KC_NO, KC_TRNS, KC_TRNS),
-	[3] = LAYOUT_split_3x6_3(KC_F14, KC_F15, KC_UP, KC_NO, KC_NO, KC_NO, KC_MPRV, KC_MPLY, KC_MNXT, 0x7F, 0x81, 0x80, LSFT_T(KC_ESC), KC_LEFT, KC_DOWN, KC_RGHT, KC_NO, KC_NO, RGB_TOG, KC_RSFT, KC_RGUI, KC_RALT, KC_RCTL, KC_NO, KC_TRNS, KC_HOME, KC_PGDN, KC_PGUP, KC_END, KC_NO, RGB_RMOD, RGB_MOD, RGB_HUD, RGB_HUI, RGB_VAD, KC_TRNS, KC_BSPC, KC_TAB, KC_ENT, KC_NO, KC_NO, KC_NO),
-	[4] = LAYOUT_split_3x6_3(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_SPC, KC_TAB, KC_TRNS, KC_TRNS, KC_SPC, KC_TRNS)
+	[0] = LAYOUT_split_3x6_3(KC_GRV, KC_Q, KC_W, KC_E, KC_R, KC_T, KC_Y, KC_U, KC_I, KC_O, KC_P, KC_NO, KC_ESC, LCTL_T(KC_A), LALT_T(KC_S), LT(4,KC_D), LSFT_T(KC_F), KC_G, KC_H, RSFT_T(KC_J), LT(4,KC_K), RALT_T(KC_L), KC_SCLN, KC_QUOT, TT(3), KC_Z, KC_X, KC_C, KC_V, KC_B, KC_N, KC_M, KC_COMM, KC_DOT, KC_SLSH, TT(3), KC_BSPC, LT(1,KC_TAB), LT(2,KC_ENT), LT(2,KC_ENT), LT(1,KC_SPC), KC_BSPC),
+	[1] = LAYOUT_split_3x6_3(KC_TRNS, KC_NO, KC_LBRC, KC_UNDS, KC_RBRC, KC_COMM, KC_CIRC, KC_7, KC_8, KC_9, KC_EQL, KC_NO, DT_UP, LCTL_T(KC_BSLS), KC_LPRN, KC_MINS, SC_RSPC, KC_DOT, KC_PLUS, RSFT_T(KC_4), KC_5, KC_6, KC_TRNS, KC_BSLS, DT_DOWN, DT_PRNT, KC_LCBR, KC_NO, KC_RCBR, KC_NO, KC_NO, KC_1, KC_2, KC_3, KC_TRNS, KC_NO, KC_TRNS, KC_TRNS, KC_TRNS, KC_SPC, KC_0, KC_BSPC),
+	[2] = LAYOUT_split_3x6_3(KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_F12, KC_ESC, KC_LCTL, KC_LALT, KC_LGUI, KC_LSFT, KC_NO, KC_LEFT, KC_DOWN, KC_UP, KC_RGHT, KC_TRNS, KC_NO, KC_NO, KC_NO, KC_NO, SGUI(KC_3), SGUI(KC_4), KC_NO, KC_HOME, KC_PGDN, KC_PGUP, KC_END, KC_NO, KC_NO, KC_TRNS, KC_TRNS, KC_NO, KC_NO, KC_TRNS, KC_TRNS),
+	[3] = LAYOUT_split_3x6_3(KC_F14, KC_F15, KC_NO, KC_UP, KC_DEL, KC_NO, KC_MPRV, KC_MPLY, KC_MNXT, 0x7F, 0x81, 0x80, KC_TRNS, KC_LCTL, KC_LEFT, LT(4,KC_DOWN), LSFT_T(KC_RGHT), KC_TAB, RGB_TOG, KC_RSFT, KC_RGUI, KC_RALT, KC_RCTL, KC_NO, KC_TRNS, KC_HOME, KC_PGDN, KC_PGUP, KC_END, KC_NO, RGB_RMOD, RGB_MOD, RGB_HUD, RGB_HUI, RGB_VAD, KC_TRNS, KC_BSPC, KC_SPC, KC_ENT, KC_TRNS, KC_TRNS, KC_TRNS),
+	[4] = LAYOUT_split_3x6_3(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_SPC, KC_TAB, KC_TRNS, KC_TRNS, KC_0, KC_TRNS)
 };
 
 #ifdef OLED_ENABLE
@@ -90,29 +158,32 @@ void oled_render_layer_state(void) {
         /* case (1 << _NUM): */
         /*     oled_write_ln_P(PSTR("Num"), true); */
         /*     break; */
+        case (1 << _RNAV):
+            oled_write_ln_P(PSTR("ViNav"), true);
+            break;
         case (1 << _LNAV):
             oled_write_ln_P(PSTR("LNav"), true);
-            break;
-        case (1 << _RNAV):
-            oled_write_ln_P(PSTR("VimNav"), true);
             break;
         case (1 << _CMDTAB):
             oled_write_ln_P(PSTR("Cmd"), true);
             break;
     }
-    /* oled_write_P(PSTR(" "), false); */
-    const uint8_t mods = get_mods();
-    if (mods & MOD_MASK_SHIFT) {
-      oled_write_P(PSTR("Sh"), true);
-    }
-    if (mods & MOD_MASK_ALT) {
-      oled_write_P(PSTR("Al"), true);
-    }
-    if (mods & MOD_MASK_GUI) {
-      oled_write_P(PSTR("Cm"), true);
-    }
-    if (mods & MOD_MASK_CTRL) {
-      oled_write_P(PSTR("Ct"), true);
+    if (is_caps_word_on()) {
+      oled_write_P(PSTR("CAPS"), true);
+    } else {
+      const uint8_t mods = get_mods();
+      if (mods & MOD_MASK_SHIFT) {
+        oled_write_P(PSTR("Sh"), true);
+      }
+      if (mods & MOD_MASK_ALT) {
+        oled_write_P(PSTR("Al"), true);
+      }
+      if (mods & MOD_MASK_GUI) {
+        oled_write_P(PSTR("Cm"), true);
+      }
+      if (mods & MOD_MASK_CTRL) {
+        oled_write_P(PSTR("Ct"), true);
+      }
     }
     oled_write_P(PSTR("\n"), false);
 }
@@ -197,9 +268,9 @@ bool oled_task_user(void) {
 static layer_state_t prev_layer_state;
 layer_state_t layer_state_set_user(layer_state_t state) {
 	if (state == (1 << _CMDTAB)) {
-		add_mods(MOD_LGUI);
+		register_mods(MOD_LGUI);
 	} else if (prev_layer_state == (1 << _CMDTAB)) {
-		del_mods(MOD_LGUI);
+		unregister_mods(MOD_LGUI);
 	}
 	prev_layer_state = state;
 	return state;
