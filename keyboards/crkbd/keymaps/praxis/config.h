@@ -33,17 +33,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define IGNORE_MOD_TAP_INTERRUPT
 #define TAPPING_FORCE_HOLD
-#define TAPPING_TERM 200
+#define TAPPING_TERM 190 // was 200
 #define TAPPING_TOGGLE 1
 
+#define COMBO_COUNT 1
+
 #ifdef RGBLIGHT_ENABLE
-    #define RGBLIGHT_EFFECT_BREATHING
-    #define RGBLIGHT_EFFECT_RAINBOW_MOOD
-    #define RGBLIGHT_EFFECT_RAINBOW_SWIRL
-    /* #define RGBLIGHT_EFFECT_SNAKE */
-    #define RGBLIGHT_EFFECT_KNIGHT
+    #define SPLIT_LAYER_STATE_ENABLE
+    #define RGBLIGHT_SPLIT
+    /* #define RGBLIGHT_EFFECT_BREATHING */
+    /* #define RGBLIGHT_EFFECT_RAINBOW_MOOD */
+    /* #define RGBLIGHT_EFFECT_RAINBOW_SWIRL */
+    /* #define RGBLIGHT_EFFECT_KNIGHT */
     #undef RGBLIGHT_DEFAULT_MODE
-    #define RGBLIGHT_DEFAULT_MODE RGBLIGHT_MODE_KNIGHT
     /* #define RGBLIGHT_EFFECT_CHRISTMAS */
     /* #define RGBLIGHT_EFFECT_STATIC_GRADIENT */
     /* #define RGBLIGHT_EFFECT_RGB_TEST */

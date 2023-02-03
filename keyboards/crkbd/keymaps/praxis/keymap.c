@@ -30,6 +30,8 @@ void keyboard_post_init_user(void) {
   for (uint8_t i = 0; i < KEYLOGGER_LENGTH; i++) {
     keylog_str[i] = ' ';
   }
+
+  rgblight_mode_noeeprom(RGBLIGHT_MODE_STATIC_LIGHT);
 }
 
 bool caps_word_press_user(uint16_t keycode) {
@@ -137,6 +139,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[4] = LAYOUT_split_3x6_3(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_SPC, KC_TAB, KC_TRNS, KC_TRNS, KC_0, KC_TRNS)
 };
 
+const uint16_t PROGMEM capslock_combo[] = {LT(4,KC_D), LT(4,KC_K), COMBO_END};
+combo_t key_combos[COMBO_COUNT] = {
+    COMBO(capslock_combo, KC_CAPS)
+};
+
 #ifdef OLED_ENABLE
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
   if (!is_keyboard_master()) {
@@ -147,24 +154,25 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation) {
 }
 
 void oled_render_layer_state(void) {
-    switch (layer_state) {
-        case 0:
-        case (1 << _BASE):
+    // TODO don't get highest layer, but check if any of the layers is on but don't render Cmd layer unless it's the only thing that's active
+    switch (get_highest_layer(layer_state)) {
+    /* switch (layer_state) { */
+        case _BASE:
             oled_write_P(PSTR("Alpha"), true);
             break;
-        case (1 << _SYM):
+        case _SYM:
             oled_write_ln_P(PSTR("Sym"), true);
             break;
         /* case (1 << _NUM): */
         /*     oled_write_ln_P(PSTR("Num"), true); */
         /*     break; */
-        case (1 << _RNAV):
-            oled_write_ln_P(PSTR("ViNav"), true);
+        case _RNAV:
+            oled_write_ln_P(PSTR("Nav"), true);
             break;
-        case (1 << _LNAV):
+        case _LNAV:
             oled_write_ln_P(PSTR("LNav"), true);
             break;
-        case (1 << _CMDTAB):
+        case _CMDTAB:
             oled_write_ln_P(PSTR("Cmd"), true);
             break;
     }
@@ -265,15 +273,49 @@ bool oled_task_user(void) {
 
 #endif // OLED_ENABLE
 
-static layer_state_t prev_layer_state;
+/* static layer_state_t prev_layer_state; */
+static bool cmdOn = false;
 layer_state_t layer_state_set_user(layer_state_t state) {
-	if (state == (1 << _CMDTAB)) {
+	/* if (state == (1 << _CMDTAB)) { */
+  if (IS_LAYER_ON_STATE(state, _CMDTAB)) {
 		register_mods(MOD_LGUI);
-	} else if (prev_layer_state == (1 << _CMDTAB)) {
+		cmdOn = true;
+	} else if (cmdOn) {//prev_layer_state == (1 << _CMDTAB)) {
 		unregister_mods(MOD_LGUI);
+	  cmdOn = false;
 	}
-	prev_layer_state = state;
+	/* prev_layer_state = state; */
 	return state;
+}
+
+bool led_update_user(led_t led_state) {
+  return false; // don't run keyboard-level led code
+}
+
+uint8_t hue;
+uint8_t brightness;
+
+void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
+  if (record->event.pressed) {
+    hue = rgblight_get_hue() + 40 + rand() % (255-80);
+    brightness = 190;
+    for (uint8_t i = 0; i < RGBLED_NUM; i++) {
+      sethsv(hue, 255, brightness, &led[i]);
+    }
+    rgblight_set();
+  }
+  /* rgblight_sethsv_master(newHue, 255, 150); */
+  /* rgblight_sethsv_slave(newHue, 255, 150); */
+}
+
+void matrix_scan_user(void) {
+  if (brightness > 0) {
+    brightness--;
+    for (uint8_t i = 0; i < RGBLED_NUM; i++) {
+      sethsv(hue, 255, brightness, &led[i]);
+    }
+    rgblight_set();
+  }
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t* record) {
