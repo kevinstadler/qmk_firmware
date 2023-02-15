@@ -57,72 +57,6 @@ enum layers {
   _CMDTAB
 };
 
-/* https://github.com/samhocevar-forks/qmk-firmware/blob/master/docs/feature_tap_dance.md#example-5-using-tap-dance-for-advanced-mod-tap-and-layer-tap-keys */
-// tapdance keycodes
-enum td_keycodes {
-  LSHIFT_RIGHTPARENS // Our example key: `LALT` when held, `(` when tapped. Add additional keycodes for each tapdance.
-};
-// define a type containing as many tapdance states as you need
-typedef enum {
-  SINGLE_TAP,
-  SINGLE_HOLD,
-  DOUBLE_SINGLE_TAP
-} td_state_t;
-// create a global instance of the tapdance state type
-static td_state_t td_state;
-// declare your tapdance functions:
-// function to determine the current tapdance state
-int cur_dance (qk_tap_dance_state_t *state);
-// `finished` and `reset` functions for each tapdance keycode
-void shiftrp_finished (qk_tap_dance_state_t *state, void *user_data);
-void shiftrp_reset (qk_tap_dance_state_t *state, void *user_data);
-
-// determine the tapdance state to return
-int cur_dance (qk_tap_dance_state_t *state) {
-  if (state->count == 1) {
-    if (state->interrupted || !state->pressed) { return SINGLE_TAP; }
-    else { return SINGLE_HOLD; }
-  }
-  if (state->count == 2) { return DOUBLE_SINGLE_TAP; }
-  else { return 3; } // any number higher than the maximum state value you return above
-}
-
-// handle the possible states for each tapdance keycode you define:
-
-void shiftrp_finished (qk_tap_dance_state_t *state, void *user_data) {
-  td_state = cur_dance(state);
-  switch (td_state) {
-    case SINGLE_TAP:
-      register_code16(KC_RPRN);
-      break;
-    case SINGLE_HOLD:
-      register_mods(MOD_BIT(KC_LSFT)); // for a layer-tap key, use `layer_on(_MY_LAYER)` here
-      break;
-    case DOUBLE_SINGLE_TAP: // allow nesting of 2 parens `((` within tapping term
-      tap_code16(KC_RPRN);
-      register_code16(KC_RPRN);
-  }
-}
-
-void shiftrp_reset (qk_tap_dance_state_t *state, void *user_data) {
-  switch (td_state) {
-    case SINGLE_TAP:
-      unregister_code16(KC_RPRN);
-      break;
-    case SINGLE_HOLD:
-      unregister_mods(MOD_BIT(KC_LSFT)); // for a layer-tap key, use `layer_off(_MY_LAYER)` here
-      break;
-    case DOUBLE_SINGLE_TAP:
-      unregister_code16(KC_RPRN);
-  }
-}
-
-// define `ACTION_TAP_DANCE_FN_ADVANCED()` for each tapdance keycode, passing in `finished` and `reset` functions
-qk_tap_dance_action_t tap_dance_actions[] = {
-  [LSHIFT_RIGHTPARENS] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, shiftrp_finished, shiftrp_reset)
-};
-
-
 /* const key_override_t coln_key_override = */
 /*     ko_make_basic(MOD_MASK_SHIFT, KC_MINS, KC_ASTR); // Shift - is * */
 
@@ -139,10 +73,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 	[4] = LAYOUT_split_3x6_3(KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_NO, KC_SPC, KC_TAB, KC_TRNS, KC_TRNS, KC_0, KC_TRNS)
 };
 
-const uint16_t PROGMEM capslock_combo[] = {LT(4,KC_D), LT(4,KC_K), COMBO_END};
-combo_t key_combos[COMBO_COUNT] = {
-    COMBO(capslock_combo, KC_CAPS)
-};
+/* const uint16_t PROGMEM capslock_combo[] = {LT(4,KC_D), LT(4,KC_K), COMBO_END}; */
+/* combo_t key_combos[COMBO_COUNT] = { */
+/*     COMBO(capslock_combo, KC_CAPS) */
+/* }; */
 
 #ifdef OLED_ENABLE
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
@@ -176,9 +110,9 @@ void oled_render_layer_state(void) {
             oled_write_ln_P(PSTR("Cmd"), true);
             break;
     }
-    if (is_caps_word_on()) {
-      oled_write_P(PSTR("CAPS"), true);
-    } else {
+    /* if (is_caps_word_on()) { */
+    /*   oled_write_P(PSTR("CAPS"), true); */
+    /* } else { */
       const uint8_t mods = get_mods();
       if (mods & MOD_MASK_SHIFT) {
         oled_write_P(PSTR("Sh"), true);
@@ -192,7 +126,7 @@ void oled_render_layer_state(void) {
       if (mods & MOD_MASK_CTRL) {
         oled_write_P(PSTR("Ct"), true);
       }
-    }
+    /* } */
     oled_write_P(PSTR("\n"), false);
 }
 
@@ -303,9 +237,12 @@ void post_process_record_user(uint16_t keycode, keyrecord_t *record) {
       sethsv(hue, 255, brightness, &led[i]);
     }
     rgblight_set();
+
+    /* for the following calls I get "error: implicit declaration of function 'rgblight_sethsv_master';"
+     * no matter whether I #define, not define or even #undef RGBLIGHT_SPLIT ... */
+		/* rgblight_sethsv_master(hue, brightness, 150); */
+		/* rgblight_sethsv_slave(hue, brightness, 150); */
   }
-  /* rgblight_sethsv_master(newHue, 255, 150); */
-  /* rgblight_sethsv_slave(newHue, 255, 150); */
 }
 
 void matrix_scan_user(void) {
